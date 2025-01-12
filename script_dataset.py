@@ -12,7 +12,6 @@ instruction_file_path = './Data/instructions.txt'
 #clean_dataset(dataset_path, instructions)
 
 # After try this
-print('ca arrive')
 img_rgb, img_depth, targets = load_dataset(dataset_path)
 print(img_rgb.shape)
 print(img_depth.shape)
