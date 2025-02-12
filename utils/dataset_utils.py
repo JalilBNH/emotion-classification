@@ -199,6 +199,21 @@ def fix_size(fn, desired_w, desired_h, fill_color=(0, 0, 0, 255)):
     return new_im
 
 
+def resize_with_padding(image, target_size=100, pad_color=(0, 0, 0)):
+    h, w = image.shape[:2]
+    scale = target_size / max(h, w)
+    new_w, new_h = int(w * scale), int(h * scale)
+    resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    top = (target_size - new_h) // 2
+    bottom = target_size - new_h - top
+    left = (target_size - new_w) // 2
+    right = target_size - new_w - left
+    padded_image = cv2.copyMakeBorder(resized, top, bottom, left, right,
+                                      borderType=cv2.BORDER_CONSTANT,
+                                      value=pad_color)
+    
+    return padded_image
+
 def load_data(data_path):
     nb_imgs = 0
     for emotion in os.listdir(data_path):
@@ -262,3 +277,25 @@ def prepare_data(imgs, labels, n_splits=10):
         ))
         
     return k_fold, le
+
+def load_and_concat(data_path):
+    nb_imgs = 0
+    for emotion in os.listdir(data_path):
+        nb_imgs += len(os.listdir(os.path.join(data_path, emotion, 'rgb')))
+        
+    i = 0
+    imgs = np.empty(shape=(nb_imgs, 100, 100, 3), dtype=np.float32)
+    labels = []
+    for emotion in sorted(os.listdir(data_path)):
+            rgb_path = os.path.join(data_path, emotion, 'rgb')
+            depth_path = os.path.join(data_path, emotion, 'depth')
+            for rgb_img, depth_img in zip(sorted(os.listdir(rgb_path)), sorted(os.listdir(depth_path))):
+                img_rgb = cv2.imread(os.path.join(data_path, emotion, 'rgb', rgb_img), cv2.IMREAD_COLOR_RGB) 
+                img_rgb = img_rgb / 255.0
+                img_depth = cv2.imread(os.path.join(data_path, emotion, 'depth', depth_img), cv2.IMREAD_COLOR_RGB) 
+                img_depth = img_depth / 255.0
+                concat = cv2.hconcat([img_rgb, img_depth])
+                imgs[i] = resize_with_padding(concat, 100)
+                labels.append(emotion)
+                i += 1
+    return imgs, np.array(labels)
